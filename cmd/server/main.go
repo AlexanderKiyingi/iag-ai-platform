@@ -106,11 +106,20 @@ func main() {
 	})
 	registry := tools.NewRegistry()
 	serviceCaller.Register(registry)
+	opsCaller := tools.NewOpsCaller(tools.OpsCallerConfig{
+		BaseURL:      cfg.OpsAPIURL,
+		TokenURL:     cfg.AuthTokenURL,
+		ClientID:     cfg.ServiceClientID,
+		ClientSecret: cfg.ServiceClientSecret,
+	})
+	if opsCaller.Configured() {
+		opsCaller.Register(registry)
+	}
 	runner := agent.NewRunner(prov, registry, repo, cfg.MaxAgentSteps, cfg.MaxDelegationDepth)
 	registry.Register(runner.DelegateTool()) // agent-to-agent handoff
 	seedAgents(ctx, repo)
-	log.Printf("ai-platform orchestrator ready: %d tools, %d services, max_steps=%d max_depth=%d writes=%v",
-		len(registry.Names()), len(serviceCaller.Catalog()), cfg.MaxAgentSteps, cfg.MaxDelegationDepth, cfg.AllowServiceWrites)
+	log.Printf("ai-platform orchestrator ready: %d tools, %d services, ops_api=%v max_steps=%d max_depth=%d writes=%v",
+		len(registry.Names()), len(serviceCaller.Catalog()), opsCaller.Configured(), cfg.MaxAgentSteps, cfg.MaxDelegationDepth, cfg.AllowServiceWrites)
 
 	router := handlers.NewRouter(handlers.RouterDeps{
 		API: &handlers.API{

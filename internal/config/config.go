@@ -40,7 +40,8 @@ type Config struct {
 	EmbeddingDim     int
 
 	// Orchestration
-	ServicesJSON       string // AI_SERVICES_JSON: {"procurement":{"audience":"iag.procurement","baseUrl":"...","description":"..."}}
+	ServicesJSON       string // AI_SERVICES_JSON
+	OpsAPIURL          string // OPS_API_URL — iag-platform-ops base URL for ops agent tools
 	MaxAgentSteps      int
 	MaxDelegationDepth int
 	AllowServiceWrites bool
@@ -78,6 +79,7 @@ func Load() (Config, error) {
 		EmbeddingDim:     getInt("AI_EMBEDDING_DIM", 256),
 
 		ServicesJSON:       strings.TrimSpace(os.Getenv("AI_SERVICES_JSON")),
+		OpsAPIURL:          strings.TrimRight(strings.TrimSpace(os.Getenv("OPS_API_URL")), "/"),
 		MaxAgentSteps:      getInt("AI_MAX_AGENT_STEPS", 8),
 		MaxDelegationDepth: getInt("AI_MAX_DELEGATION_DEPTH", 3),
 		AllowServiceWrites: strings.EqualFold(getenv("AI_ALLOW_SERVICE_WRITES", "false"), "true"),

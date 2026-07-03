@@ -67,6 +67,24 @@ func seedAgents(ctx context.Context, repo *repository.Repository) {
 				"requisitions, RFQs, purchase orders, vendors, and budget commitments. Summarize " +
 				"clearly and reference the data you fetched.",
 		},
+		{
+			Name:        "platform-ops-agent",
+			Description: "Platform SRE agent — diagnoses microservice failures, crashes, and missing env vars on Railway.",
+			Tools: []string{
+				"get_platform_overview",
+				"list_platform_services",
+				"get_service_health",
+				"get_open_incidents",
+				"get_env_audit",
+				"get_railway_deployments",
+			},
+			System: "You are the IAG platform operations specialist. Diagnose microservice health issues " +
+				"using the ops monitoring tools — never invent service names or environment variables. " +
+				"Start with get_platform_overview and get_open_incidents, then drill into get_service_health " +
+				"for affected services. Check get_env_audit for missing configuration and get_railway_deployments " +
+				"for crash loops or failed deploys. Provide: (1) likely root cause, (2) evidence from the tools, " +
+				"(3) concrete remediation steps for Railway operators. Be concise and actionable.",
+		},
 	}
 	for _, a := range defaults {
 		if err := repo.SeedAgent(ctx, a); err != nil {
