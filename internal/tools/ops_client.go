@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -139,6 +140,31 @@ func (o *OpsCaller) Register(r *Registry) {
 	r.Register(o.tool("get_railway_deployments", "Latest Railway deployment status per service (requires Railway API on ops service).", map[string]any{"type": "object", "properties": map[string]any{}}, func(ctx context.Context, _ json.RawMessage) (string, error) {
 		return o.get(ctx, "/api/v1/railway/deployments")
 	}))
+	r.Register(o.tool("get_railway_logs", "Fetch the tail of a service's latest Railway deployment logs — the primary evidence for crash loops and boot failures. Secrets are redacted server-side. Requires the Railway API on the ops service.", map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"serviceId": map[string]any{"type": "string", "description": "Service id from list_platform_services (e.g. finance, authentication)."},
+			"limit":     map[string]any{"type": "integer", "description": "Number of recent log lines to fetch (default 200, max 1000)."},
+		},
+		"required": []string{"serviceId"},
+	}, func(ctx context.Context, raw json.RawMessage) (string, error) {
+		var in struct {
+			ServiceID string `json:"serviceId"`
+			Limit     int    `json:"limit"`
+		}
+		if err := json.Unmarshal(raw, &in); err != nil {
+			return "", err
+		}
+		id := strings.TrimSpace(in.ServiceID)
+		if id == "" {
+			return "", fmt.Errorf("serviceId is required")
+		}
+		path := "/api/v1/services/" + id + "/logs"
+		if in.Limit > 0 {
+			path += "?limit=" + strconv.Itoa(in.Limit)
+		}
+		return o.get(ctx, path)
+	}))
 }
 
 func (o *OpsCaller) tool(name, description string, schema map[string]any, fn func(context.Context, json.RawMessage) (string, error)) Tool {
@@ -154,6 +180,7 @@ func (o *OpsCaller) ToolNames() []string {
 		"get_open_incidents",
 		"get_env_audit",
 		"get_railway_deployments",
+		"get_railway_logs",
 	}
 	sort.Strings(names)
 	return names

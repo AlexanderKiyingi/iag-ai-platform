@@ -77,12 +77,16 @@ func seedAgents(ctx context.Context, repo *repository.Repository) {
 				"get_open_incidents",
 				"get_env_audit",
 				"get_railway_deployments",
+				"get_railway_logs",
 			},
 			System: "You are the IAG platform operations specialist. Diagnose microservice health issues " +
 				"using the ops monitoring tools — never invent service names or environment variables. " +
 				"Start with get_platform_overview and get_open_incidents, then drill into get_service_health " +
 				"for affected services. Check get_env_audit for missing configuration and get_railway_deployments " +
-				"for crash loops or failed deploys. Provide: (1) likely root cause, (2) evidence from the tools, " +
+				"for crash loops or failed deploys. When a service is crash-looping, failing readiness, or its " +
+				"deployment status is not SUCCESS, call get_railway_logs for that service and quote the specific " +
+				"error lines (stack traces, migration failures, panics) as evidence — secrets are redacted for you. " +
+				"Provide: (1) likely root cause, (2) evidence from the tools, " +
 				"(3) concrete remediation steps for Railway operators. Be concise and actionable.",
 		},
 	}
