@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/alvor-technologies/iag-platform-go/ratelimit"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
@@ -38,6 +39,11 @@ type RouterDeps struct {
 func NewRouter(deps RouterDeps) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
+	// Pin trusted proxies so the rate limiter keys on the real, non-spoofable
+	// client IP (empty = gin default; set TRUSTED_PROXIES behind the gateway).
+	if err := ratelimit.ApplyTrustedProxies(r, deps.API.Cfg.TrustedProxies); err != nil {
+		panic("ai-platform: invalid TRUSTED_PROXIES: " + err.Error())
+	}
 	r.Use(otelgin.Middleware(deps.API.Cfg.ServiceName))
 	r.Use(gin.Recovery())
 	if deps.PlatformAuth != nil {
@@ -63,6 +69,13 @@ func NewRouter(deps RouterDeps) *gin.Engine {
 	if deps.StrictRBAC {
 		v1.Use(middleware.StrictRBAC())
 	}
+	// Throttle the API per caller (principal attached above, else IP). Inference
+	// and agent orchestration are expensive, so this bounds compute/cost — not
+	// just abuse — on /completions, /embeddings, /orchestrate, /agents/*/run.
+	v1.Use(ratelimit.Middleware(ratelimit.Config{
+		Rate: ratelimit.PerMinute(deps.API.Cfg.RateLimitPerMin),
+		Key:  ratelimit.ByUserOrIP,
+	}))
 	{
 		v1.GET("/overview", middleware.RequirePermission("ai.use_inference"), a.Overview)
 

@@ -30,6 +30,12 @@ type Config struct {
 	ServiceClientSecret string
 	AuthTokenURL        string
 	CORSOrigins         []string
+	// TrustedProxies pins gin's trusted proxies (gateway/edge CIDR) so the rate
+	// limiter keys on the real, non-spoofable client IP. Empty = gin default.
+	TrustedProxies []string
+	// RateLimitPerMin is the per-caller budget on the /api/v1 API. Inference and
+	// orchestration are expensive, so this defends compute/cost, not just abuse.
+	RateLimitPerMin int
 
 	// AI provider
 	AnthropicAPIKey  string
@@ -70,6 +76,8 @@ func Load() (Config, error) {
 		ServiceClientID:     getenv("SERVICE_CLIENT_ID", "iag-ai-platform"),
 		ServiceClientSecret: os.Getenv("SERVICE_CLIENT_SECRET"),
 		CORSOrigins:         splitCSV(corsenv.Allowlist("http://localhost:3000,http://localhost:8080")),
+		TrustedProxies:      splitCSV(os.Getenv("TRUSTED_PROXIES")),
+		RateLimitPerMin:     getInt("RATE_LIMIT_PER_MIN", 120),
 
 		AnthropicAPIKey:  strings.TrimSpace(os.Getenv("ANTHROPIC_API_KEY")),
 		AnthropicBaseURL: getenv("ANTHROPIC_BASE_URL", "https://api.anthropic.com"),
