@@ -117,7 +117,9 @@ func main() {
 	}
 	runner := agent.NewRunner(prov, registry, repo, cfg.MaxAgentSteps, cfg.MaxDelegationDepth)
 	registry.Register(runner.DelegateTool()) // agent-to-agent handoff
-	seedAgents(ctx, repo)
+	if cfg.SeedAgents {
+		seedAgents(ctx, repo)
+	}
 	log.Printf("ai-platform orchestrator ready: %d tools, %d services, ops_api=%v max_steps=%d max_depth=%d writes=%v",
 		len(registry.Names()), len(serviceCaller.Catalog()), opsCaller.Configured(), cfg.MaxAgentSteps, cfg.MaxDelegationDepth, cfg.AllowServiceWrites)
 

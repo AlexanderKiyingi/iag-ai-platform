@@ -52,6 +52,12 @@ type Config struct {
 	MaxAgentSteps      int
 	MaxDelegationDepth int
 	AllowServiceWrites bool
+
+	// SeedAgents installs the default coordinator + specialist agent definitions
+	// at boot when they are absent. These are configuration, not demo business
+	// data, so it defaults on; set AI_SEED_AGENTS=false to manage the catalogue
+	// entirely through the API.
+	SeedAgents bool
 }
 
 func Load() (Config, error) {
@@ -92,6 +98,7 @@ func Load() (Config, error) {
 		MaxAgentSteps:      getInt("AI_MAX_AGENT_STEPS", 8),
 		MaxDelegationDepth: getInt("AI_MAX_DELEGATION_DEPTH", 3),
 		AllowServiceWrites: strings.EqualFold(getenv("AI_ALLOW_SERVICE_WRITES", "false"), "true"),
+		SeedAgents:         !strings.EqualFold(getenv("AI_SEED_AGENTS", "true"), "false"),
 	}
 
 	if c.DatabaseURL == "" {
