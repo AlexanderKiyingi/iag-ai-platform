@@ -2,6 +2,7 @@ package ratelimit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -57,7 +58,8 @@ func NewPostgresStore(db Querier, opts ...PostgresStoreOption) *PostgresStore {
 
 // EnsureSchema idempotently creates the counter table. platform-go is a library
 // and cannot run migrations, so services call this at boot (or ship the DDL as a
-// migration). Safe to call repeatedly.
+// migration). Safe to call repeatedly, including from replicas booting at the
+// same moment.
 func (s *PostgresStore) EnsureSchema(ctx context.Context) error {
 	_, err := s.db.Exec(ctx, fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s (
@@ -66,6 +68,13 @@ func (s *PostgresStore) EnsureSchema(ctx context.Context) error {
 			count        INT    NOT NULL DEFAULT 0,
 			PRIMARY KEY (bucket, window_start)
 		)`, s.table))
+	// IF NOT EXISTS does not cover a concurrent CREATE: both statements pass the
+	// check and the loser fails on the catalog's unique index. The table exists
+	// either way, which is all the caller asked for.
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && (pgErr.Code == "23505" || pgErr.Code == "42P07") {
+		return nil
+	}
 	return err
 }
 

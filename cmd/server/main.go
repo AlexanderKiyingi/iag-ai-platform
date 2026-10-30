@@ -123,6 +123,14 @@ func main() {
 	log.Printf("ai-platform orchestrator ready: %d tools, %d services, ops_api=%v max_steps=%d max_depth=%d writes=%v",
 		len(registry.Names()), len(serviceCaller.Catalog()), opsCaller.Configured(), cfg.MaxAgentSteps, cfg.MaxDelegationDepth, cfg.AllowServiceWrites)
 
+	rateLimitStore, rateLimitCleanup, err := newRateLimitStore(ctx, cfg.RateLimitStore, pool)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if rateLimitCleanup != nil {
+		go rateLimitCleanup(ctx)
+	}
+
 	router := handlers.NewRouter(handlers.RouterDeps{
 		API: &handlers.API{
 			Cfg:         cfg,
@@ -136,6 +144,8 @@ func main() {
 		},
 		PlatformAuth: platformAuth,
 		StrictRBAC:   cfg.StrictRBAC(),
+
+		RateLimitStore: rateLimitStore,
 	})
 
 	srv := &http.Server{
