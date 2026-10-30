@@ -37,6 +37,9 @@ type Config struct {
 	// RateLimitPerMin is the per-caller budget on the /api/v1 API. Inference and
 	// orchestration are expensive, so this defends compute/cost, not just abuse.
 	RateLimitPerMin int
+	// RateLimitStore is where the limiter counts: "memory" (per replica, the
+	// default) or "postgres" (one shared budget across replicas).
+	RateLimitStore string
 
 	// AI provider
 	AnthropicAPIKey  string
@@ -85,6 +88,7 @@ func Load() (Config, error) {
 		CORSOrigins:         splitCSV(corsenv.Allowlist("http://localhost:3000,http://localhost:8080")),
 		TrustedProxies:      splitCSV(os.Getenv("TRUSTED_PROXIES")),
 		RateLimitPerMin:     getInt("RATE_LIMIT_PER_MIN", 120),
+		RateLimitStore:      strings.ToLower(getenv("RATE_LIMIT_STORE", "memory")),
 
 		AnthropicAPIKey:  strings.TrimSpace(os.Getenv("ANTHROPIC_API_KEY")),
 		AnthropicBaseURL: getenv("ANTHROPIC_BASE_URL", "https://api.anthropic.com"),

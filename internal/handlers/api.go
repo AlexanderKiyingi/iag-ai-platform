@@ -34,6 +34,8 @@ type RouterDeps struct {
 	API          *API
 	PlatformAuth *middleware.PlatformAuth
 	StrictRBAC   bool
+	// RateLimitStore backs the /api/v1 limiter; nil keeps the in-memory store.
+	RateLimitStore ratelimit.Store
 }
 
 func NewRouter(deps RouterDeps) *gin.Engine {
@@ -73,8 +75,9 @@ func NewRouter(deps RouterDeps) *gin.Engine {
 	// and agent orchestration are expensive, so this bounds compute/cost — not
 	// just abuse — on /completions, /embeddings, /orchestrate, /agents/*/run.
 	v1.Use(ratelimit.Middleware(ratelimit.Config{
-		Rate: ratelimit.PerMinute(deps.API.Cfg.RateLimitPerMin),
-		Key:  ratelimit.ByUserOrIP,
+		Rate:  ratelimit.PerMinute(deps.API.Cfg.RateLimitPerMin),
+		Key:   ratelimit.ByUserOrIP,
+		Store: deps.RateLimitStore,
 	}))
 	{
 		v1.GET("/overview", middleware.RequirePermission("ai.use_inference"), a.Overview)
